@@ -1,0 +1,41 @@
+pipeline{
+    agent any
+     tools {
+        maven 'Maven-3.5.2'
+    }
+    
+    environment{
+        PATH = "/opt/maven3/bin:$PATH"
+    }
+    stages{
+        stage("Git Checkout"){
+            steps{
+                git credentialsId: 'javahome2', url: 'https://github.com/chevvavamshi/myweb.git'
+            }
+        }
+        stage("Maven Build"){
+            steps{
+                sh "mvn clean package"
+                
+            }
+        }
+    
+        stage('Build Docker Image'){
+            steps{
+                 sh 'docker build -t ukchevva/spring-boot-mongo .'
+                 sh 'docker build -t tomcat:${BUILD_NUMBER} .'
+                 sh 'docker run -itd --name srini26 -p 3900:8080 tomcat:${BUILD_NUMBER}'
+             }
+         }
+        stage('Push Docker Image'){
+             steps{
+                  withCredentials([string(credentialsId: 'DOCKER_HUB_CREDENTIALS', variable: 'DOCKER_HUB_CREDENTIALS')]) {
+                      sh "docker login -u ukchevva -p ${DOCKER_HUB_CREDENTIALS}"
+            }
+            sh 'docker push ukchevva/spring-boot-mongo'
+        }
+      }
+        
+        
+    }
+}
